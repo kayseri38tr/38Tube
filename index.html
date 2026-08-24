@@ -100,9 +100,17 @@
     .player-header {
       display: flex; justify-content: space-between; align-items: center;
       padding: 10px 16px; background: #faf8f4; border-bottom: 1px solid var(--border);
+      gap: 8px;
     }
-    .player-header strong { font-size: 14px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .player-header button { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+    .player-header strong { font-size: 14px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+    .player-controls { display: flex; align-items: center; gap: 8px; }
+    .switch-btn {
+      background: var(--primary); color: white; border: none;
+      padding: 4px 10px; border-radius: 6px; font-size: 12px;
+      font-weight: 600; cursor: pointer;
+    }
+    .switch-btn:hover { background: #d14e22; }
+    .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); padding: 0 4px; }
     .player-frame { aspect-ratio: 16/9; background: #000; }
     .player-frame iframe { width: 100%; height: 100%; border: none; }
 
@@ -167,14 +175,18 @@
       <button id="btn" type="button">Ara →</button>
     </div>
 
-    <!-- Sabit Oynatıcı Alanı (Arama Kutusu Altı) -->
+    <!-- Sabit Oynatıcı Alanı -->
     <div id="playerContainer" class="sticky-player-container">
       <div class="player-header">
         <strong id="playerTitle">Video Yükleniyor...</strong>
-        <button type="button" id="closePlayerBtn">✕</button>
+        <div class="player-controls">
+          <button type="button" id="switchServerBtn" class="switch-btn" title="Açılmazsa alternatif sunucuya geçin">🔄 Sunucu Değiştir</button>
+          <button type="button" id="closePlayerBtn" class="close-btn">✕</button>
+        </div>
       </div>
       <div class="player-frame">
         <iframe id="frame" allowfullscreen
+          referrerpolicy="no-referrer"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
         </iframe>
       </div>
@@ -203,12 +215,16 @@
       "https://pipedapi.mha.fi"
     ];
 
-    // Reklamsız Embed Sunucuları (Invidious / Piped Embed Nodes)
+    // Cloudflare Korumasına Takılmayan Güvenilir Oynatıcı Sunucuları
     const EMBED_NODES = [
-      "https://yewtu.be/embed/",
-      "https://invidious.nerdvpn.de/embed/",
-      "https://piped.video/embed/"
+      (id) => `https://piped.video/embed/${id}?autoplay=1`,
+      (id) => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`,
+      (id) => `https://yewtu.be/embed/${id}?autoplay=1`,
+      (id) => `https://invidious.drgns.space/embed/${id}?autoplay=1`
     ];
+
+    let currentVideoId = "";
+    let currentServerIndex = 0;
 
     const qInput = document.getElementById("q");
     const btn = document.getElementById("btn");
@@ -220,6 +236,7 @@
     const playerTitle = document.getElementById("playerTitle");
     const frame = document.getElementById("frame");
     const closePlayerBtn = document.getElementById("closePlayerBtn");
+    const switchServerBtn = document.getElementById("switchServerBtn");
 
     function esc(str) {
       if (!str) return "";
@@ -356,23 +373,33 @@
       }
     }
 
-    // Reklamsız İzleme Oynatıcısı
+    function loadVideoOnCurrentServer() {
+      if (!currentVideoId) return;
+      frame.src = EMBED_NODES[currentServerIndex](currentVideoId);
+    }
+
     function play(id, title) {
       if (!id) return;
-      playerTitle.textContent = title || "Video";
+      currentVideoId = id;
+      currentServerIndex = 0; // İlk güvenilir sunucudan başla
       
-      // Invidious/Piped kullanarak reklamsız oynatma
-      frame.src = EMBED_NODES[0] + id + "?autoplay=1&listen=false";
+      playerTitle.textContent = title || "Video";
+      loadVideoOnCurrentServer();
       
       playerContainer.classList.add("active");
-      
-      // Oynatıcı alanına yumuşak bir kaydırma yap
       playerContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function switchServer() {
+      if (!currentVideoId) return;
+      currentServerIndex = (currentServerIndex + 1) % EMBED_NODES.length;
+      loadVideoOnCurrentServer();
     }
 
     function closePlayer() {
       playerContainer.classList.remove("active");
       frame.src = "";
+      currentVideoId = "";
     }
 
     btn.addEventListener("click", search);
@@ -381,6 +408,7 @@
     });
     
     closePlayerBtn.addEventListener("click", closePlayer);
+    switchServerBtn.addEventListener("click", switchServer);
 
     var exampleBtns = document.querySelectorAll(".examples button[data-q]");
     for (var k = 0; k < exampleBtns.length; k++) {

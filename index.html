@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="YouTube videolarını aramak, listelemek ve sayfa içinde izlemek için tek dosyalık örnek." />
+    <link rel="preconnect" href="https://www.youtube.com" />
+    <link rel="preconnect" href="https://i.ytimg.com" />
     <title>YouTune Türkiye</title>
     <style>
       :root {
@@ -42,7 +44,7 @@
         padding: 10px 28px;
         background: rgba(15, 15, 15, 0.94);
         border-bottom: 1px solid var(--line);
-        backdrop-filter: blur(12px);
+         /* 1 GB RAM / eski GPU için pahalı blur efekti kullanılmıyor. */
       }
       .brand {
         display: flex;
@@ -112,7 +114,7 @@
         padding: 10px max(24px, calc((100vw - 920px) / 2)) 20px;
         border-bottom: 1px solid var(--line);
         background: var(--bg);
-        box-shadow: 0 20px 70px rgba(0, 0, 0, .42);
+         box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
       }
       .inline-player-frame {
         width: min(900px, 100%);
@@ -184,13 +186,12 @@
         grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
         gap: 28px 18px;
       }
-      .video-card {
+       .video-card {
         min-width: 0;
         border-radius: var(--radius);
         outline: none;
-        transition: transform .2s ease;
       }
-      .video-card:hover, .video-card:focus-visible { transform: translateY(-4px); }
+       .video-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
       .thumbnail-wrap {
         position: relative;
         aspect-ratio: 16 / 9;
@@ -198,7 +199,14 @@
         border-radius: var(--radius);
         background: #292929;
       }
-      .thumbnail-wrap img { width: 100%; height: 100%; display: block; object-fit: cover; }
+       .thumbnail-wrap img {
+         width: 100%;
+         height: 100%;
+         display: block;
+         object-fit: cover;
+         /* Büyük hq720 görselleri yerine küçük mqdefault görselleri kullanılır. */
+         contain: paint;
+       }
        .card-favorite {
          position: absolute;
          top: 8px;
@@ -312,7 +320,7 @@
         padding: 8px;
         border-top: 1px solid var(--line);
         background: rgba(24, 24, 24, .96);
-        backdrop-filter: blur(12px);
+         /* Eski ekran kartlarında sabit menü yine hafif kalır. */
       }
       .nav-button {
         min-width: 90px;
@@ -448,26 +456,20 @@
     <script>
       "use strict";
 
-      // Arama servisleri: biri çalışmazsa sıradaki otomatik olarak denenir.
+       // Arama servisleri: biri çalışmazsa sıradaki otomatik olarak denenir.
       const SEARCH_ENDPOINTS = [
         { type: "piped", url: "https://pipedapi.kavin.rocks/search" },
         { type: "piped", url: "https://api.piped.private.coffee/search" },
         { type: "invidious", url: "https://invidious.nerdvpn.de/api/v1/search" },
         { type: "invidious", url: "https://inv.tux.pizza/api/v1/search" }
       ];
+       // Ana sayfa açılırken 40 ayrı ağ isteği yapmak eski cihazlarda tarayıcıyı
+       // gereksiz yere meşgul eder. Tek bir trend isteği yeterlidir.
        const TRENDING_ENDPOINTS = [
          { type: "piped", url: "https://pipedapi.kavin.rocks/trending?region=TR" },
-         { type: "piped", url: "https://api.piped.private.coffee/trending?region=TR" },
-         { type: "invidious", url: "https://invidious.nerdvpn.de/api/v1/trending?region=TR" },
          { type: "invidious", url: "https://inv.tux.pizza/api/v1/trending?region=TR" }
        ];
-       const TRENDING_SEARCH_TERMS = [
-         "Türkiye gündem", "son dakika Türkiye", "Türkçe müzik", "yeni çıkan şarkılar",
-         "Türkçe pop", "Türkçe rap", "spor haberleri", "futbol Türkiye",
-         "Süper Lig", "teknoloji Türkiye", "oyun Türkçe", "Minecraft Türkçe",
-         "eğlence Türkçe", "komedi Türkçe", "film önerileri", "dizi önerileri",
-         "belgesel Türkçe", "bilim Türkçe", "ekonomi Türkiye", "magazin Türkiye"
-       ];
+       const PLAYER_HOST = "https://www.youtube.com";
 
       // Çerez Yardımcı Fonksiyonları (Siteniz için çerez yönetimi eklenmiştir)
       function setCookie(name, value, days) {
@@ -635,7 +637,6 @@
 
        async function fetchTrending() {
          let lastError;
-         let trendingResults = [];
 
          for (const endpoint of TRENDING_ENDPOINTS) {
            try {
@@ -661,27 +662,12 @@
                category: "Trend"
              })).filter((video) => video.id);
 
-             if (results.length) {
-               trendingResults = results;
-               break;
-             }
+              if (results.length) return results.slice(0, 60);
            } catch (error) {
              lastError = error;
            }
          }
 
-         const searchResults = await Promise.allSettled(
-           TRENDING_SEARCH_TERMS.flatMap((term) => [1, 2].map((page) => fetchSearch(term, page)))
-         );
-         const relatedVideos = searchResults
-           .filter((result) => result.status === "fulfilled")
-           .flatMap((result) => result.value)
-           .map((video) => ({ ...video, category: "Trend" }));
-         const uniqueVideos = Array.from(new Map(
-           [...trendingResults, ...relatedVideos].map((video) => [video.id, video])
-         ).values());
-
-         if (uniqueVideos.length) return shuffleVideos(uniqueVideos).slice(0, 500);
          throw lastError || new Error("Türkiye trend videolarına şu an erişilemiyor.");
        }
 
@@ -760,10 +746,11 @@
            emptyState.style.display = visibleVideos.length || mode === "favorites" ? "none" : "block";
          }
         grid.innerHTML = visibleVideos.map((video) => `
-          <article class="video-card" tabindex="0" role="button" data-video-id="${video.id}" aria-label="${video.title}">
+           <article class="video-card" tabindex="0" role="button" data-video-id="${video.id}" aria-label="${video.title}">
             <div class="thumbnail-wrap">
-              <img src="https://i.ytimg.com/vi/${video.id}/hq720.jpg" alt="" loading="lazy"
-                onerror="this.src='https://i.ytimg.com/vi/${video.id}/hqdefault.jpg'" />
+               <img src="https://i.ytimg.com/vi/${video.id}/mqdefault.jpg" alt="" width="320" height="180"
+                 loading="lazy" decoding="async"
+                 onerror="this.onerror=null; this.src='https://i.ytimg.com/vi/${video.id}/default.jpg'" />
                <button class="card-favorite ${isFavorite(video.id) ? "selected" : ""}" type="button"
                  data-favorite-id="${video.id}" aria-label="${isFavorite(video.id) ? "Favorilerden çıkar" : "Favorilere ekle"}">
                  ${isFavorite(video.id) ? "♥" : "♡"}
@@ -820,7 +807,7 @@
          }
        }
 
-      function openVideo(id) {
+       function openVideo(id) {
         activeVideo = (remoteVideos || homeVideos).find((video) => video.id === id);
         if (!activeVideo) return;
         document.querySelector("#inlinePlayer").hidden = false;
@@ -836,9 +823,18 @@
         favoriteButton.textContent = isFavorite(id) ? "♥ Favorilerden çıkar" : "♡ Favorile";
         favoriteButton.classList.toggle("selected", isFavorite(id));
         
-        // Gizlilik modlu resmi YouTube Player (No-Cookie Alan Adı)
-        playerFrame.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0"
-          title="${activeVideo.title}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+         // YouTube'un resmi gömülü oynatıcısı kullanılır. youtube-nocookie alan adı
+         // gizlilik için iyi olsa da bazı eski cihazlarda ilk açılışı yavaşlatabilir.
+         // vq=small düşük donanımda hızlı başlama için bir kalite ipucudur;
+         // YouTube gerektiğinde kaliteyi kendi ağ koşullarına göre değiştirir.
+         const iframe = document.createElement("iframe");
+         iframe.src = `${PLAYER_HOST}/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&vq=small`;
+         iframe.title = activeVideo.title;
+         iframe.loading = "eager";
+         iframe.referrerPolicy = "strict-origin-when-cross-origin";
+         iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+         iframe.allowFullscreen = true;
+         playerFrame.replaceChildren(iframe);
       }
 
       function setMode(nextMode) {
@@ -976,7 +972,10 @@
 
       renderCategories();
       renderVideos();
-       loadTrendingVideos();
+       // Trend verisini ilk ekran çizildikten sonra al. Böylece kullanıcı
+       // aramaya veya videoya hemen tıklayabilir; arka plan isteği bekletmez.
+       const runWhenIdle = window.requestIdleCallback || ((callback) => setTimeout(callback, 1200));
+       runWhenIdle(loadTrendingVideos);
     </script>
   </body>
 </html>

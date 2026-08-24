@@ -470,6 +470,10 @@
          { type: "invidious", url: "https://inv.tux.pizza/api/v1/trending?region=TR" }
        ];
        const PLAYER_HOST = "https://www.youtube.com";
+       // Çok eski bilgisayarlarda iframe yerine YouTube'un hafif mobil
+       // oynatıcısını kullan. Bu, ses-görüntü senkronunu YouTube'a bırakır.
+       // Uygulama içi oynatıcıyı tercih edersen false yapabilirsin.
+       const LOW_END_MODE = true;
 
       // Çerez Yardımcı Fonksiyonları (Siteniz için çerez yönetimi eklenmiştir)
       function setCookie(name, value, days) {
@@ -810,16 +814,25 @@
        function openVideo(id) {
         activeVideo = (remoteVideos || homeVideos).find((video) => video.id === id);
         if (!activeVideo) return;
-        document.querySelector("#inlinePlayer").hidden = false;
         const history = getStored("youtune-history").filter((item) => item !== id);
         setStored("youtune-history", [id, ...history].slice(0, 30));
         
         // İzlenen son videoyu Cookie olarak kaydeder
         setCookie("last_watched_video", id, 30);
 
+         if (LOW_END_MODE) {
+           // Mobil YouTube sayfası, bu uygulamanın iframe'inden daha az arayüz
+           // ve daha az JavaScript çalıştırır. Aynı zamanda A/V senkronunu
+           // tarayıcıya değil YouTube'un kendi oynatıcısına bırakır.
+           window.location.assign(`https://m.youtube.com/watch?v=${encodeURIComponent(id)}`);
+           return;
+         }
+
+         document.querySelector("#inlinePlayer").hidden = false;
+
         document.querySelector("#playerTitle").textContent = activeVideo.title;
         document.querySelector("#playerMeta").textContent = `${activeVideo.channel} • ${activeVideo.views} • ${activeVideo.age}`;
-        document.querySelector("#youtubeButton").href = `https://www.youtube.com/watch?v=${id}`;
+         document.querySelector("#youtubeButton").href = `https://m.youtube.com/watch?v=${encodeURIComponent(id)}`;
         favoriteButton.textContent = isFavorite(id) ? "♥ Favorilerden çıkar" : "♡ Favorile";
         favoriteButton.classList.toggle("selected", isFavorite(id));
         

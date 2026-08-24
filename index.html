@@ -103,6 +103,51 @@
       .header-action:hover { background: var(--surface-2); }
 
       main { width: min(1500px, calc(100% - 48px)); margin: 0 auto; padding-top: 26px; }
+      .inline-player {
+        position: sticky;
+        top: 76px;
+        z-index: 9;
+        width: 100vw;
+        margin: 0 0 0 calc(50% - 50vw);
+        padding: 10px max(24px, calc((100vw - 920px) / 2)) 20px;
+        border-bottom: 1px solid var(--line);
+        background: var(--bg);
+        box-shadow: 0 20px 70px rgba(0, 0, 0, .42);
+      }
+      .inline-player-frame {
+        width: min(900px, 100%);
+        margin: 0 auto;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border-radius: 11px;
+        background: #000;
+      }
+      .inline-player-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+      .inline-player-details {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 14px 4px 2px;
+      }
+      .inline-player-details { display: none; }
+      .inline-player-details h2 { margin: 0 0 6px; font-size: 19px; }
+      .inline-player-details p { margin: 0; color: var(--muted); font-size: 13px; }
+      .inline-player-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .inline-player-actions button, .inline-player-actions a {
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        color: var(--text);
+        background: var(--surface-2);
+        text-decoration: none;
+      }
+      .inline-player-actions button:hover, .inline-player-actions a:hover,
+      .inline-player-actions .selected {
+        border-color: var(--accent);
+        color: white;
+        background: var(--accent-soft);
+      }
       .hero {
         display: flex;
         align-items: end;
@@ -154,6 +199,29 @@
         background: #292929;
       }
       .thumbnail-wrap img { width: 100%; height: 100%; display: block; object-fit: cover; }
+       .card-favorite {
+         position: absolute;
+         top: 8px;
+         left: 8px;
+         z-index: 1;
+         display: grid;
+         place-items: center;
+         width: 34px;
+         height: 34px;
+         padding: 0;
+         border: 1px solid rgba(255, 255, 255, .22);
+         border-radius: 50%;
+         color: white;
+         background: rgba(0, 0, 0, .72);
+         font-size: 19px;
+         line-height: 1;
+         transition: transform .2s ease, color .2s ease, background .2s ease;
+       }
+       .card-favorite:hover, .card-favorite.selected {
+         color: white;
+         background: var(--accent);
+         transform: scale(1.08);
+       }
       .duration {
         position: absolute;
         right: 8px;
@@ -209,6 +277,27 @@
         text-align: center;
       }
       .empty strong { display: block; margin-bottom: 8px; color: var(--text); font-size: 20px; }
+      .load-more {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin: 38px 0 20px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+      }
+      .load-more.visible { display: flex; }
+      .load-more button {
+        padding: 10px 18px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        color: var(--text);
+        background: var(--surface);
+        font-weight: 700;
+      }
+      .load-more button:hover { border-color: var(--accent); background: var(--accent); }
+      .load-more button:disabled { cursor: wait; opacity: .6; }
+      .loaded-count { color: var(--muted); font-size: 13px; }
 
       .bottom-nav {
         position: fixed;
@@ -285,6 +374,16 @@
         .brand { font-size: 16px; }
         .header-action { display: none; }
         main { width: min(100% - 26px, 1500px); padding-top: 20px; }
+        .inline-player {
+          top: 62px;
+          padding: 6px 13px 14px;
+        }
+        .inline-player-frame { border-radius: 8px; }
+        .inline-player-details { display: block; padding: 10px 3px 2px; }
+        .inline-player-details h2 { font-size: 15px; }
+        .inline-player-details p { font-size: 11px; }
+        .inline-player-actions { margin-top: 10px; }
+        .inline-player-actions button, .inline-player-actions a { padding: 7px 10px; font-size: 12px; }
         .hero { display: block; }
         .result-count { display: block; margin-top: 12px; }
         .video-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 10px; }
@@ -308,11 +407,22 @@
       </header>
 
       <main>
-        <section class="hero">
-          <div>
-            <h1 id="pageTitle">Ana Sayfa</h1>
-            <p>Türkçe videoları keşfet, ara ve sayfadan ayrılmadan izle.</p>
+        <section class="inline-player" id="inlinePlayer" aria-label="Video oynatıcı" hidden>
+          <div class="inline-player-frame" id="playerFrame"></div>
+          <div class="inline-player-details">
+            <div>
+              <h2 id="playerTitle">Video seçilmedi</h2>
+              <p id="playerMeta">İzlemek için aşağıdaki videolardan birini seç.</p>
+            </div>
+            <div class="inline-player-actions">
+              <button id="favoriteButton" type="button">♡ Favorile</button>
+              <button id="shareButton" type="button">↗ Paylaş</button>
+              <a id="youtubeButton" target="_blank" rel="noopener noreferrer">YouTube'da Aç</a>
+            </div>
           </div>
+        </section>
+
+        <section class="hero">
           <div class="result-count" id="resultCount"></div>
         </section>
 
@@ -322,6 +432,10 @@
           <strong>Video bulunamadı</strong>
           Arama kelimesini veya kategori filtresini değiştirip tekrar deneyebilirsin.
         </section>
+        <section class="load-more" id="loadMoreBox">
+          <div class="loaded-count" id="loadedCount"></div>
+          <button id="loadMoreButton" type="button">Daha fazla yükle</button>
+        </section>
       </main>
 
       <nav class="bottom-nav" aria-label="Alt menü">
@@ -329,22 +443,6 @@
         <button class="nav-button" id="favoritesButton" type="button"><span>♡</span>Favoriler</button>
         <button class="nav-button" id="historyButton" type="button"><span>◷</span>Geçmiş</button>
       </nav>
-    </div>
-
-    <div class="modal" id="videoModal" role="dialog" aria-modal="true" aria-labelledby="playerTitle">
-      <div class="player-panel">
-        <div class="player-top"><button class="close-button" id="closeModal" type="button" aria-label="Kapat">×</button></div>
-        <div class="player-frame" id="playerFrame"></div>
-        <div class="player-details">
-          <h2 id="playerTitle"></h2>
-          <p id="playerMeta"></p>
-          <div class="player-actions">
-            <button id="favoriteButton" type="button">♡ Favorile</button>
-            <button id="shareButton" type="button">↗ Paylaş</button>
-            <a id="youtubeButton" target="_blank" rel="noopener noreferrer">YouTube'da Aç</a>
-          </div>
-        </div>
-      </div>
     </div>
 
     <script>
@@ -357,6 +455,19 @@
         { type: "invidious", url: "https://invidious.nerdvpn.de/api/v1/search" },
         { type: "invidious", url: "https://inv.tux.pizza/api/v1/search" }
       ];
+       const TRENDING_ENDPOINTS = [
+         { type: "piped", url: "https://pipedapi.kavin.rocks/trending?region=TR" },
+         { type: "piped", url: "https://api.piped.private.coffee/trending?region=TR" },
+         { type: "invidious", url: "https://invidious.nerdvpn.de/api/v1/trending?region=TR" },
+         { type: "invidious", url: "https://inv.tux.pizza/api/v1/trending?region=TR" }
+       ];
+       const TRENDING_SEARCH_TERMS = [
+         "Türkiye gündem", "son dakika Türkiye", "Türkçe müzik", "yeni çıkan şarkılar",
+         "Türkçe pop", "Türkçe rap", "spor haberleri", "futbol Türkiye",
+         "Süper Lig", "teknoloji Türkiye", "oyun Türkçe", "Minecraft Türkçe",
+         "eğlence Türkçe", "komedi Türkçe", "film önerileri", "dizi önerileri",
+         "belgesel Türkçe", "bilim Türkçe", "ekonomi Türkiye", "magazin Türkiye"
+       ];
 
       // Çerez Yardımcı Fonksiyonları (Siteniz için çerez yönetimi eklenmiştir)
       function setCookie(name, value, days) {
@@ -391,22 +502,63 @@
         { id: "35X2Km-5j00", title: "Mavi Vatan'ın renk sırrı: TCG Anadolu neden gri?", channel: "GZT", views: "42 B görüntüleme", age: "2 gün önce", duration: "0:50", category: "Haber" },
         { id: "K_KpomHNcc0", title: "Türk-İsrail Savaşında Kürtler Hangi Tarafta?", channel: "İbrahim Halil Baran", views: "52 B görüntüleme", age: "2 gün önce", duration: "1:09:12", category: "Haber" },
         { id: "F64PRO93e3w", title: "Darbe olacak sanıp cumhurbaşkanı Erdoğan'ı tehdit etmiş!", channel: "TVNET", views: "749 B görüntüleme", age: "4 gün önce", duration: "0:42", category: "Haber" },
-        { id: "LdghWhfJPUA", title: "1 Dolar vs. 500.000 Dolarlık Deneyimler!", channel: "MrBeassttTurkiye", views: "13 B görüntüleme", age: "1 yıl önce", duration: "17:34", category: "Eğlence" }
+         { id: "LdghWhfJPUA", title: "1 Dolar vs. 500.000 Dolarlık Deneyimler!", channel: "MrBeassttTurkiye", views: "13 B görüntüleme", age: "1 yıl önce", duration: "17:34", category: "Eğlence" },
+         { id: "dQw4w9WgXcQ", title: "Rick Astley - Never Gonna Give You Up", channel: "Rick Astley", views: "1,6 Mr görüntüleme", age: "16 yıl önce", duration: "3:33", category: "Müzik" },
+         { id: "9bZkp7q19f0", title: "PSY - GANGNAM STYLE", channel: "officialpsy", views: "5,5 Mr görüntüleme", age: "13 yıl önce", duration: "4:13", category: "Müzik" },
+         { id: "kJQP7kiw5Fk", title: "Luis Fonsi - Despacito ft. Daddy Yankee", channel: "Luis Fonsi", views: "8,9 Mr görüntüleme", age: "9 yıl önce", duration: "4:42", category: "Müzik" },
+         { id: "JGwWNGJdvx8", title: "Ed Sheeran - Shape of You", channel: "Ed Sheeran", views: "6,4 Mr görüntüleme", age: "9 yıl önce", duration: "4:24", category: "Müzik" },
+         { id: "OPf0YbXqDm0", title: "Mark Ronson - Uptown Funk ft. Bruno Mars", channel: "Mark Ronson", views: "5,3 Mr görüntüleme", age: "11 yıl önce", duration: "4:31", category: "Müzik" },
+         { id: "60ItHLz5WEA", title: "Alan Walker - Faded", channel: "Alan Walker", views: "3,7 Mr görüntüleme", age: "10 yıl önce", duration: "3:33", category: "Müzik" },
+         { id: "2Vv-BfVoq4g", title: "Ed Sheeran - Perfect", channel: "Ed Sheeran", views: "4,1 Mr görüntüleme", age: "9 yıl önce", duration: "4:40", category: "Müzik" },
+         { id: "YQHsXMglC9A", title: "Adele - Hello", channel: "Adele", views: "3,2 Mr görüntüleme", age: "10 yıl önce", duration: "6:07", category: "Müzik" },
+         { id: "fJ9rUzIMcZQ", title: "Queen - Bohemian Rhapsody", channel: "Queen Official", views: "1,7 Mr görüntüleme", age: "8 yıl önce", duration: "6:07", category: "Müzik" },
+         { id: "pRpeEdMmmQ0", title: "Shakira - Waka Waka (This Time for Africa)", channel: "Shakira", views: "4,0 Mr görüntüleme", age: "15 yıl önce", duration: "3:31", category: "Müzik" },
+         { id: "09R8_2nJtjg", title: "Maroon 5 - Sugar", channel: "Maroon 5", views: "4,1 Mr görüntüleme", age: "11 yıl önce", duration: "5:02", category: "Müzik" },
+         { id: "CevxZvSJLk8", title: "Katy Perry - Roar", channel: "Katy Perry", views: "4,0 Mr görüntüleme", age: "12 yıl önce", duration: "4:30", category: "Müzik" },
+         { id: "RgKAFK5djSk", title: "Wiz Khalifa - See You Again ft. Charlie Puth", channel: "Wiz Khalifa", views: "6,5 Mr görüntüleme", age: "11 yıl önce", duration: "3:58", category: "Müzik" },
+         { id: "hTWKbfoikeg", title: "Nirvana - Smells Like Teen Spirit", channel: "Nirvana", views: "2,0 Mr görüntüleme", age: "15 yıl önce", duration: "4:38", category: "Müzik" },
+         { id: "aqz-KE-bpKQ", title: "Sia - Chandelier", channel: "Sia", views: "2,8 Mr görüntüleme", age: "12 yıl önce", duration: "3:52", category: "Müzik" },
+         { id: "lp-EO5I60KA", title: "Bruno Mars - Just The Way You Are", channel: "Bruno Mars", views: "2,0 Mr görüntüleme", age: "15 yıl önce", duration: "3:57", category: "Müzik" },
+         { id: "H14bBuluwB8", title: "The power of vulnerability | Brené Brown | TED", channel: "TED", views: "65 Mn görüntüleme", age: "14 yıl önce", duration: "20:50", category: "Eğitim" },
+         { id: "arj7oStGLkU", title: "How to speak so that people want to listen", channel: "TED", views: "41 Mn görüntüleme", age: "12 yıl önce", duration: "9:58", category: "Eğitim" },
+         { id: "zIwz1j2G8Qc", title: "The surprising habits of original thinkers", channel: "TED", views: "28 Mn görüntüleme", age: "11 yıl önce", duration: "15:24", category: "Eğitim" },
+         { id: "M7lc1UVf-VE", title: "YouTube Player API Demo", channel: "YouTube Developers", views: "2,1 Mn görüntüleme", age: "10 yıl önce", duration: "2:16", category: "Eğlence" },
+         { id: "KQ6zr6kCPj8", title: "Rebecca Black - Friday", channel: "Rebecca Black", views: "170 Mn görüntüleme", age: "15 yıl önce", duration: "3:49", category: "Eğlence" },
+         { id: "L_jWHffIx5E", title: "Smash Mouth - All Star", channel: "Smash Mouth", views: "400 Mn görüntüleme", age: "15 yıl önce", duration: "4:02", category: "Eğlence" },
+         { id: "tgbNymZ7vqY", title: "The Muppets: Bohemian Rhapsody", channel: "The Muppets", views: "25 Mn görüntüleme", age: "14 yıl önce", duration: "4:22", category: "Komedi" },
+         { id: "dMH0bHeiRNg", title: "The Original Numa Numa Video", channel: "Gary Brolsma", views: "45 Mn görüntüleme", age: "18 yıl önce", duration: "2:36", category: "Komedi" }
       ];
 
       const categories = ["Tümü", ...new Set(videos.map((video) => video.category))];
+       const HOME_PAGE_SIZE = 12;
+       let homeVisibleCount = HOME_PAGE_SIZE;
+       let homeVideos = videos.slice();
+       let homeIsTrending = false;
+       let homeLoading = true;
+       function shuffleVideos(videoList) {
+         const shuffled = videoList.slice();
+         for (let index = shuffled.length - 1; index > 0; index -= 1) {
+           const randomIndex = Math.floor(Math.random() * (index + 1));
+           [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+         }
+         return shuffled;
+       }
+       homeVideos = shuffleVideos(homeVideos);
       let activeCategory = "Tümü";
       let activeVideo = null;
       let mode = "home";
       let searchTerm = "";
       let remoteVideos = null;
+      let searchPage = 0;
+      let hasMoreSearchResults = false;
+      let searchLoading = false;
+      let remoteQuery = "";
 
       const grid = document.querySelector("#videoGrid");
       const emptyState = document.querySelector("#emptyState");
       const resultCount = document.querySelector("#resultCount");
       const categoriesEl = document.querySelector("#categories");
       const searchInput = document.querySelector("#searchInput");
-      const modal = document.querySelector("#videoModal");
       const playerFrame = document.querySelector("#playerFrame");
       const favoriteButton = document.querySelector("#favoriteButton");
 
@@ -420,14 +572,38 @@
       }
       function isFavorite(id) { return getStored("youtune-favorites").includes(id); }
 
+       function getFavoriteVideos() {
+         const favoriteIds = getStored("youtune-favorites");
+         const storedVideos = getStored("youtune-favorite-videos");
+         const availableVideos = [...storedVideos, ...homeVideos, ...videos];
+         const videosById = new Map(availableVideos.map((video) => [video.id, video]));
+         return favoriteIds.map((id) => videosById.get(id)).filter(Boolean);
+       }
+
+       function toggleFavorite(video) {
+         const favoriteIds = getStored("youtune-favorites");
+         const favoriteVideos = getStored("youtune-favorite-videos");
+         const alreadyFavorite = favoriteIds.includes(video.id);
+         const nextIds = alreadyFavorite
+           ? favoriteIds.filter((id) => id !== video.id)
+           : [video.id, ...favoriteIds];
+         const nextVideos = alreadyFavorite
+           ? favoriteVideos.filter((item) => item.id !== video.id)
+           : [video, ...favoriteVideos.filter((item) => item.id !== video.id)];
+         setStored("youtune-favorites", nextIds);
+         setStored("youtune-favorite-videos", nextVideos);
+       }
+
       function filteredVideos() {
         const term = searchTerm.trim().toLocaleLowerCase("tr-TR");
-        const sourceVideos = remoteVideos || videos;
+         const sourceVideos = mode === "favorites"
+           ? getFavoriteVideos()
+           : remoteVideos || homeVideos;
         return sourceVideos.filter((video) => {
           const categoryMatch = activeCategory === "Tümü" || video.category === activeCategory;
           const text = `${video.title} ${video.channel} ${video.category}`.toLocaleLowerCase("tr-TR");
           const searchMatch = !term || text.includes(term);
-          const modeMatch = mode === "home" || (mode === "favorites" && isFavorite(video.id)) || getStored("youtune-history").includes(video.id);
+           const modeMatch = mode === "home" || mode === "favorites" || getStored("youtune-history").includes(video.id);
           return categoryMatch && searchMatch && modeMatch;
         });
       }
@@ -448,16 +624,77 @@
         return `${views} görüntüleme`;
       }
 
-      async function fetchSearch(query) {
+       function getVideoId(item) {
+         let id = item.videoId || "";
+         if (!id && item.url) {
+           const match = item.url.match(/[?&]v=([^&]+)/);
+           id = match ? match[1] : item.url.replace("/watch?v=", "").split("&")[0];
+         }
+         return id;
+       }
+
+       async function fetchTrending() {
+         let lastError;
+         let trendingResults = [];
+
+         for (const endpoint of TRENDING_ENDPOINTS) {
+           try {
+             const controller = new AbortController();
+             const timeoutId = setTimeout(() => controller.abort(), 5500);
+             const fetchUrl = endpoint.type === "piped"
+               ? endpoint.url
+               : `${endpoint.url}&type=video`;
+             const response = await fetch(fetchUrl, { signal: controller.signal });
+             clearTimeout(timeoutId);
+
+             if (!response.ok) continue;
+
+             const data = await response.json();
+             const rawItems = Array.isArray(data) ? data : (data.items || []);
+             const results = rawItems.map((item) => ({
+               id: getVideoId(item),
+               title: item.title || "Başlıksız",
+               channel: item.uploaderName || item.author || "Kanal",
+               views: formatViews(item.views ?? item.viewCount),
+               age: item.uploadedDate || item.publishedText || "",
+               duration: formatDuration(item.duration ?? item.lengthSeconds),
+               category: "Trend"
+             })).filter((video) => video.id);
+
+             if (results.length) {
+               trendingResults = results;
+               break;
+             }
+           } catch (error) {
+             lastError = error;
+           }
+         }
+
+         const searchResults = await Promise.allSettled(
+           TRENDING_SEARCH_TERMS.flatMap((term) => [1, 2].map((page) => fetchSearch(term, page)))
+         );
+         const relatedVideos = searchResults
+           .filter((result) => result.status === "fulfilled")
+           .flatMap((result) => result.value)
+           .map((video) => ({ ...video, category: "Trend" }));
+         const uniqueVideos = Array.from(new Map(
+           [...trendingResults, ...relatedVideos].map((video) => [video.id, video])
+         ).values());
+
+         if (uniqueVideos.length) return shuffleVideos(uniqueVideos).slice(0, 500);
+         throw lastError || new Error("Türkiye trend videolarına şu an erişilemiyor.");
+       }
+
+      async function fetchSearch(query, page = 1) {
         let lastError;
 
         for (const endpoint of SEARCH_ENDPOINTS) {
           try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 4500);
-            const fetchUrl = endpoint.type === "piped"
-              ? `${endpoint.url}?q=${encodeURIComponent(query)}&filter=videos`
-              : `${endpoint.url}?q=${encodeURIComponent(query)}&type=video`;
+             const fetchUrl = endpoint.type === "piped"
+               ? `${endpoint.url}?q=${encodeURIComponent(query)}&filter=videos&page=${page}`
+               : `${endpoint.url}?q=${encodeURIComponent(query)}&type=video&page=${page}`;
 
             const response = await fetch(fetchUrl, { signal: controller.signal });
             clearTimeout(timeoutId);
@@ -469,11 +706,7 @@
             if (!rawItems.length) continue;
 
             return rawItems.map((item) => {
-              let id = item.videoId || "";
-              if (!id && item.url) {
-                const match = item.url.match(/[?&]v=([^&]+)/);
-                id = match ? match[1] : item.url.replace("/watch?v=", "").split("&")[0];
-              }
+               const id = getVideoId(item);
 
               return {
                 id,
@@ -494,7 +727,14 @@
       }
 
       function renderCategories() {
-        categoriesEl.innerHTML = categories.map((category) => `
+         const sourceCategories = mode === "favorites"
+           ? ["Tümü"]
+           : remoteVideos
+          ? ["Tümü", "Arama"]
+           : homeIsTrending
+             ? ["Tümü", "Trend"]
+             : categories;
+        categoriesEl.innerHTML = sourceCategories.map((category) => `
           <button class="category ${activeCategory === category ? "active" : ""}" type="button" data-category="${category}">
             ${category}
           </button>
@@ -502,14 +742,32 @@
       }
 
       function renderVideos() {
-        const visibleVideos = filteredVideos();
-        resultCount.textContent = `${visibleVideos.length} video`;
-        emptyState.style.display = visibleVideos.length ? "none" : "block";
+         const isHomeList = !remoteVideos && mode === "home";
+         const allVisibleVideos = homeLoading && isHomeList ? [] : filteredVideos();
+         const visibleVideos = isHomeList
+           ? allVisibleVideos.slice(0, homeVisibleCount)
+           : allVisibleVideos;
+         if (homeLoading && isHomeList) {
+           resultCount.textContent = "Türkiye trend videoları yükleniyor...";
+           emptyState.innerHTML = "<strong>Güncel videolar getiriliyor...</strong>Türkiye trend listesi hazırlanıyor.";
+           emptyState.style.display = "block";
+         } else {
+           resultCount.textContent = remoteVideos && remoteQuery
+             ? `${visibleVideos.length} / ${remoteVideos.length} video`
+             : isHomeList && visibleVideos.length < allVisibleVideos.length
+               ? `${visibleVideos.length} / ${allVisibleVideos.length} video`
+               : `${visibleVideos.length} video`;
+           emptyState.style.display = visibleVideos.length || mode === "favorites" ? "none" : "block";
+         }
         grid.innerHTML = visibleVideos.map((video) => `
           <article class="video-card" tabindex="0" role="button" data-video-id="${video.id}" aria-label="${video.title}">
             <div class="thumbnail-wrap">
               <img src="https://i.ytimg.com/vi/${video.id}/hq720.jpg" alt="" loading="lazy"
                 onerror="this.src='https://i.ytimg.com/vi/${video.id}/hqdefault.jpg'" />
+               <button class="card-favorite ${isFavorite(video.id) ? "selected" : ""}" type="button"
+                 data-favorite-id="${video.id}" aria-label="${isFavorite(video.id) ? "Favorilerden çıkar" : "Favorilere ekle"}">
+                 ${isFavorite(video.id) ? "♥" : "♡"}
+               </button>
               <span class="play-overlay">▶</span>
               <span class="duration">${video.duration}</span>
             </div>
@@ -522,11 +780,50 @@
             </div>
           </article>
         `).join("");
+
+        const loadMoreBox = document.querySelector("#loadMoreBox");
+        const loadedCount = document.querySelector("#loadedCount");
+        const loadMoreButton = document.querySelector("#loadMoreButton");
+         const showHomeLoadMore = Boolean(isHomeList && allVisibleVideos.length);
+         const showSearchLoadMore = Boolean(mode === "home" && remoteVideos && remoteQuery && remoteVideos.length);
+         const showLoadMore = showHomeLoadMore || showSearchLoadMore;
+        loadMoreBox.classList.toggle("visible", showLoadMore);
+         loadedCount.textContent = showHomeLoadMore
+           ? `${visibleVideos.length} / ${allVisibleVideos.length} ana sayfa videosu gösteriliyor`
+           : showSearchLoadMore
+             ? `${remoteVideos.length} sonuç yüklendi • en fazla 400 video`
+             : "";
+         loadMoreButton.hidden = isHomeList
+           ? visibleVideos.length >= allVisibleVideos.length
+           : !hasMoreSearchResults;
+        loadMoreButton.disabled = searchLoading;
+         loadMoreButton.textContent = searchLoading
+           ? "Yükleniyor..."
+           : "Daha fazla yükle";
       }
 
+       async function loadTrendingVideos() {
+         renderVideos();
+         try {
+           const results = await fetchTrending();
+           homeVideos = shuffleVideos(results);
+           homeIsTrending = true;
+           homeVisibleCount = HOME_PAGE_SIZE;
+           activeCategory = "Tümü";
+           renderCategories();
+         } catch (error) {
+           homeIsTrending = false;
+           console.warn("Türkiye trend videoları alınamadı, yedek liste kullanılıyor:", error.message);
+         } finally {
+           homeLoading = false;
+           renderVideos();
+         }
+       }
+
       function openVideo(id) {
-        activeVideo = (remoteVideos || videos).find((video) => video.id === id);
+        activeVideo = (remoteVideos || homeVideos).find((video) => video.id === id);
         if (!activeVideo) return;
+        document.querySelector("#inlinePlayer").hidden = false;
         const history = getStored("youtune-history").filter((item) => item !== id);
         setStored("youtune-history", [id, ...history].slice(0, 30));
         
@@ -542,22 +839,14 @@
         // Gizlilik modlu resmi YouTube Player (No-Cookie Alan Adı)
         playerFrame.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0"
           title="${activeVideo.title}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
-        modal.classList.add("open");
-        document.body.style.overflow = "hidden";
-      }
-
-      function closeVideo() {
-        modal.classList.remove("open");
-        playerFrame.innerHTML = "";
-        document.body.style.overflow = "";
-        activeVideo = null;
       }
 
       function setMode(nextMode) {
         mode = nextMode;
+         if (nextMode === "favorites") activeCategory = "Tümü";
         document.querySelectorAll(".nav-button").forEach((button) => button.classList.remove("active"));
         document.querySelector(`#${nextMode === "home" ? "homeButton" : nextMode === "favorites" ? "favoritesButton" : "historyButton"}`).classList.add("active");
-        document.querySelector("#pageTitle").textContent = nextMode === "home" ? "Ana Sayfa" : nextMode === "favorites" ? "Favoriler" : "Geçmiş";
+         renderCategories();
         renderVideos();
       }
 
@@ -567,10 +856,15 @@
          const submitButton = event.currentTarget.querySelector("button");
 
          if (query.length < 2) {
-           remoteVideos = null;
+            remoteVideos = null;
+            searchPage = 0;
+            hasMoreSearchResults = false;
+            remoteQuery = "";
            searchTerm = "";
            mode = "home";
-           document.querySelector("#pageTitle").textContent = "Ana Sayfa";
+            homeVisibleCount = HOME_PAGE_SIZE;
+            activeCategory = "Tümü";
+            renderCategories();
            renderVideos();
            return;
          }
@@ -581,12 +875,14 @@
          emptyState.style.display = "block";
 
          try {
-           const results = await fetchSearch(query);
-           remoteVideos = results;
-           searchTerm = "";
+            const results = await fetchSearch(query, 1);
+            remoteVideos = results.slice(0, 20);
+            searchPage = 1;
+            hasMoreSearchResults = results.length >= 20;
+            remoteQuery = query;
+            searchTerm = "";
            activeCategory = "Tümü";
            mode = "home";
-           document.querySelector("#pageTitle").textContent = `"${query}" sonuçları`;
            renderCategories();
            renderVideos();
          } catch (error) {
@@ -598,14 +894,61 @@
            submitButton.disabled = false;
          }
       });
+
+       document.querySelector("#loadMoreButton").addEventListener("click", async () => {
+         if (!remoteVideos && mode === "home") {
+           const homeResults = filteredVideos();
+           if (homeVisibleCount < homeResults.length) {
+             homeVisibleCount = Math.min(homeVisibleCount + HOME_PAGE_SIZE, homeResults.length);
+             renderVideos();
+           }
+           return;
+         }
+
+         if (!remoteQuery || !hasMoreSearchResults || searchLoading || !remoteVideos || remoteVideos.length >= 400) return;
+         searchLoading = true;
+         renderVideos();
+
+         try {
+           const results = await fetchSearch(remoteQuery, searchPage + 1);
+           const nextVideos = [...remoteVideos, ...results];
+           remoteVideos = Array.from(new Map(nextVideos.map((video) => [video.id, video])).values()).slice(0, 400);
+           searchPage += 1;
+           hasMoreSearchResults = results.length >= 20 && remoteVideos.length < 400;
+           renderCategories();
+           renderVideos();
+         } catch (error) {
+           hasMoreSearchResults = false;
+           resultCount.textContent = "Daha fazla sonuç alınamadı";
+           document.querySelector("#loadedCount").textContent = error.message || "Lütfen tekrar deneyin.";
+         } finally {
+           searchLoading = false;
+           renderVideos();
+         }
+       });
       categoriesEl.addEventListener("click", (event) => {
         const button = event.target.closest("[data-category]");
         if (!button) return;
         activeCategory = button.dataset.category;
+         if (!remoteVideos && mode === "home") homeVisibleCount = HOME_PAGE_SIZE;
         renderCategories();
         renderVideos();
       });
       grid.addEventListener("click", (event) => {
+         const favoriteControl = event.target.closest("[data-favorite-id]");
+         if (favoriteControl) {
+           event.stopPropagation();
+           const video = (remoteVideos || homeVideos).find((item) => item.id === favoriteControl.dataset.favoriteId)
+             || getFavoriteVideos().find((item) => item.id === favoriteControl.dataset.favoriteId);
+           if (video) {
+             toggleFavorite(video);
+             favoriteControl.classList.toggle("selected", isFavorite(video.id));
+             favoriteControl.textContent = isFavorite(video.id) ? "♥" : "♡";
+             favoriteControl.setAttribute("aria-label", isFavorite(video.id) ? "Favorilerden çıkar" : "Favorilere ekle");
+             if (mode === "favorites") renderVideos();
+           }
+           return;
+         }
         const card = event.target.closest("[data-video-id]");
         if (card) openVideo(card.dataset.videoId);
       });
@@ -614,17 +957,12 @@
         const card = event.target.closest("[data-video-id]");
         if (card) { event.preventDefault(); openVideo(card.dataset.videoId); }
       });
-      document.querySelector("#closeModal").addEventListener("click", closeVideo);
-      modal.addEventListener("click", (event) => { if (event.target === modal) closeVideo(); });
-      document.addEventListener("keydown", (event) => { if (event.key === "Escape" && modal.classList.contains("open")) closeVideo(); });
       favoriteButton.addEventListener("click", () => {
         if (!activeVideo) return;
-        const favorites = getStored("youtune-favorites");
-        const next = isFavorite(activeVideo.id) ? favorites.filter((id) => id !== activeVideo.id) : [activeVideo.id, ...favorites];
-        setStored("youtune-favorites", next);
+         toggleFavorite(activeVideo);
         favoriteButton.textContent = isFavorite(activeVideo.id) ? "♥ Favorilerden çıkar" : "♡ Favorile";
         favoriteButton.classList.toggle("selected", isFavorite(activeVideo.id));
-        if (mode === "favorites") renderVideos();
+         renderVideos();
       });
       document.querySelector("#shareButton").addEventListener("click", async () => {
         if (!activeVideo) return;
@@ -638,6 +976,7 @@
 
       renderCategories();
       renderVideos();
+       loadTrendingVideos();
     </script>
   </body>
 </html>
